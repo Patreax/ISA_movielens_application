@@ -1,0 +1,22 @@
+# Project-level orchestration for the ISA MovieLens recommendation backend.
+# Lives at the repository root by user request — this is project orchestration,
+# not backend source code, and references backend/Dockerfile (Constitution II).
+#
+# Run: `docker compose up --build` (single command for the demo).
+
+services:
+  backend:
+    build: ./backend
+    image: isa-movielens-backend
+    container_name: isa-recsys
+    ports:
+      - "8000:8000"
+    # Override the routing threshold or CORS by uncommenting:
+    # environment:
+    #   RECSYS_API_RATING_THRESHOLD: "10"
+    #   RECSYS_API_CORS_ORIGINS: "http://localhost:5173"
+    # Override baked-in assets at runtime by mounting volumes:
+    # volumes:
+    #   - ./backend/models:/app/models:ro
+    #   - ./backend/data/ml-1m:/app/data/ml-1m:ro
+    restart: "no"

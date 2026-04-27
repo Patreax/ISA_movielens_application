@@ -1,0 +1,332 @@
+openapi: 3.1.0
+info:
+  title: ISA MovieLens Recommendation API
+  version: 1.0.0
+  summary: |
+    REST API serving movie recommendations from two pretrained models loaded from
+    `.pkl` files: a warm-user SVD model and a cold-start KMeans clustering model.
+    Demo backend for the ISA assignment.
+  description: |
+    See `specs/001-movie-recsys-api/spec.md` for the feature specification and
+    `specs/001-movie-recsys-api/data-model.md` for the entity contracts. This
+    document is the canonical machine-readable contract for the REST surface.
+
+servers:
+  - url: http://localhost:8000
+    description: Local Docker container (default port)
+
+tags:
+  - name: recommendations
+    description: Generate movie recommendations.
+  - name: health
+    description: Operational endpoints.
+  - name: reference
+    description: Vocabularies for cold-start input.
+
+paths:
+
+  /recommendations:
+    post:
+      tags: [recommendations]
+      summary: Get a ranked list of movie recommendations for a user
+      description: |
+        Stateless endpoint. Routes the request to the warm-user SVD model or the
+        cold-start KMeans model based on whether `user_id` is a known MovieLens
+        integer with at least `rating_threshold` ratings (default 5). For
+        UUID-shaped `user_id` values, the `profile` object is required.
+      operationId: postRecommendations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecommendationRequest"
+            examples:
+              warmUser:
+                summary: Existing MovieLens user (integer ID)
+                value:
+                  user_id: "1"
+                  count: 5
+              coldUser:
+                summary: New user with UUID + profile
+                value:
+                  user_id: "550e8400-e29b-41d4-a716-446655440000"
+                  count: 5
+                  profile:
+                    age_code: 25
+                    gender: "M"
+                    occupation_code: 12
+                    preferred_genres: ["Action", "Sci-Fi"]
+      responses:
+        "200":
+          description: Recommendations produced successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendationResponse"
+        "404":
+          description: |
+            `user_id` is a numeric string but no such MovieLens user exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: |
+            Request validation failed (malformed `user_id`, missing `profile`
+            for a UUID user, out-of-range `age_code` / `occupation_code` / `count`,
+            unknown gender or genre name).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: |
+            Inference failed. Returned only when the underlying model raised an
+            exception; the response payload names the model and the error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: |
+            Service is still starting or its self-test has not yet completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /health:
+    get:
+      tags: [health]
+      summary: Liveness and readiness snapshot
+      description: |
+        Reports whether the service is ready, whether each model is loaded, and
+        the row counts of the in-memory MovieLens DataFrames.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Health snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /reference-data:
+    get:
+      tags: [reference]
+      summary: Accepted vocabularies for cold-start input
+      description: |
+        Returns the lists of accepted genre names, age-bracket codes with
+        labels, occupation codes with labels, and gender codes. A frontend can
+        use this to render valid cold-start input controls without hard-coding
+        the vocabulary.
+      operationId: getReferenceData
+      responses:
+        "200":
+          description: Reference data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceDataResponse"
+
+components:
+
+  schemas:
+
+    RecommendationRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+          description: |
+            Either a positive integer in string form (existing MovieLens user)
+            or a UUID (new user). The string `"0"` and negative-integer strings
+            are rejected.
+          examples: ["1", "1234", "550e8400-e29b-41d4-a716-446655440000"]
+        count:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Number of recommendations to return.
+        profile:
+          $ref: "#/components/schemas/ColdStartProfile"
+
+    ColdStartProfile:
+      type: object
+      required: [age_code, gender, occupation_code, preferred_genres]
+      properties:
+        age_code:
+          type: integer
+          enum: [1, 18, 25, 35, 45, 50, 56]
+          description: MovieLens-1M age bracket code.
+        gender:
+          type: string
+          enum: [M, F]
+        occupation_code:
+          type: integer
+          minimum: 0
+          maximum: 20
+          description: MovieLens-1M occupation code (0..20).
+        preferred_genres:
+          type: array
+          items:
+            type: string
+            enum:
+              - Action
+              - Adventure
+              - Animation
+              - "Children's"
+              - Comedy
+              - Crime
+              - Documentary
+              - Drama
+              - Fantasy
+              - Film-Noir
+              - Horror
+              - Musical
+              - Mystery
+              - Romance
+              - Sci-Fi
+              - Thriller
+              - War
+              - Western
+          description: |
+            Subset of the 18 MovieLens-1M genres. May be an empty array.
+            Duplicates are de-duplicated server-side.
+
+    MovieRecommendation:
+      type: object
+      required: [rank, movie_id, title, genres, score]
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+        movie_id:
+          type: integer
+        title:
+          type: string
+          examples: ["Toy Story (1995)"]
+        genres:
+          type: array
+          items:
+            type: string
+        score:
+          type: number
+          format: float
+          description: |
+            Predicted rating (warm path) or cluster-aggregated score (cold path).
+            Frontends should treat this as an opaque sortable score; the absolute
+            range is not promised to be identical across paths.
+
+    RecommendationResponse:
+      type: object
+      required:
+        [user_id, path, count_requested, count_returned, explanation,
+         recommendations, notes]
+      properties:
+        user_id:
+          type: string
+        path:
+          type: string
+          enum:
+            - warm
+            - cold_request_profile
+            - cold_stored_demographics
+            - cold_fallback_genre_popular
+        count_requested:
+          type: integer
+        count_returned:
+          type: integer
+        explanation:
+          type: string
+        recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/MovieRecommendation"
+        notes:
+          type: array
+          items:
+            type: string
+
+    HealthResponse:
+      type: object
+      required: [status, models, dataset, config]
+      properties:
+        status:
+          type: string
+          enum: [ready, starting]
+        models:
+          type: object
+          required: [svd, cold_start]
+          properties:
+            svd:
+              type: object
+              required: [loaded]
+              properties:
+                loaded: { type: boolean }
+            cold_start:
+              type: object
+              required: [loaded]
+              properties:
+                loaded: { type: boolean }
+        dataset:
+          type: object
+          required: [movies, users, ratings]
+          properties:
+            movies: { type: integer }
+            users: { type: integer }
+            ratings: { type: integer }
+        config:
+          type: object
+          required: [rating_threshold, data_dir, models_dir]
+          properties:
+            rating_threshold: { type: integer }
+            data_dir: { type: string }
+            models_dir: { type: string }
+
+    ReferenceDataResponse:
+      type: object
+      required: [genres, age_codes, occupation_codes, genders]
+      properties:
+        genres:
+          type: array
+          items: { type: string }
+        age_codes:
+          type: array
+          items:
+            type: object
+            required: [code, label]
+            properties:
+              code: { type: integer }
+              label: { type: string }
+        occupation_codes:
+          type: array
+          items:
+            type: object
+            required: [code, label]
+            properties:
+              code: { type: integer }
+              label: { type: string }
+        genders:
+          type: array
+          items: { type: string }
+
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          enum:
+            - validation_error
+            - user_not_found
+            - inference_failed
+            - service_starting
+        message:
+          type: string
+        details:
+          type: object
+          description: Optional structured details (e.g., `field_errors` array).

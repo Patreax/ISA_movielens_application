@@ -1,0 +1,12 @@
+# Development dependencies for the ISA MovieLens Recommendation API backend.
+# Install on top of requirements.txt:
+#   pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+
+-r requirements.txt
+
+# -- test runner + HTTP client used by FastAPI's TestClient --
+pytest==8.3.4
+httpx==0.28.1
+
+# -- lint / format (matches source recsys repo's choice) --
+ruff==0.8.4

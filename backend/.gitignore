@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Virtual env (the user's local venv)
+.venv/
+venv/
+
+# Build artefacts
+build/
+dist/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Pretrained models and MovieLens raw data (copied in via scripts/copy-assets.sh,
+# baked into the image at build time, not committed — see research.md D-04).
+models/*
+!models/.gitkeep
+data/ml-1m/*
+!data/ml-1m/.gitkeep
+
+# Local env file overrides (if a developer creates one)
+.env
+.env.*

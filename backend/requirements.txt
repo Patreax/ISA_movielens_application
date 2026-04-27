@@ -1,0 +1,26 @@
+# Runtime dependencies for the ISA MovieLens Recommendation API backend.
+#
+# Pinning policy (Constitution Principle IV — "Pretrained Model Inference Only"):
+# the libraries that participate in unpickling svd_model.pkl and
+# cold_start_model.pkl MUST match the versions used to produce those artefacts
+# in the source recsys repository (./uv.lock of /home/ptomco/School/5-year/LS/
+# ISA/ISA_movielens_recsys). Drift on these is the most common cause of silent
+# prediction corruption. Do NOT widen these pins without re-pickling the
+# models against the new versions and re-running the offline evaluation.
+
+# -- web framework + server (loose pins are OK; not pickle-critical) --
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# -- ML libraries that participate in unpickling (HARD pins) --
+scikit-surprise==1.1.4
+scikit-learn==1.8.0
+numpy==1.26.4
+pandas==3.0.2
+joblib==1.5.3
+scipy==1.17.1
+
+# -- logging (matches source recsys repo's stack) --
+loguru==0.7.3
