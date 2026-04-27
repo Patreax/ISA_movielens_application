@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "ISA MovieLens recommendation REST API backend (FastAPI, pretrained SVD + cold-start KMeans)."
 requires-python = ">=3.11,<3.13"
 readme = "README.md"
-authors = [{ name = "Patrik Tomco", email = "patrik.tomco@innovatrics.com" }]
+authors = [{ name = "Patrik Tomco", email = "xtomco@stuba.sk" }, { name = "Samuel Svitek", email = "xsvitek@stuba.sk" }]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
