@@ -10,15 +10,13 @@ The repository is organised as a multi-package monorepo:
 ```
 isa-movielens-application/
 ├── backend/          # FastAPI service that serves the pretrained models
-├── frontend/         # (coming soon) React UI that talks to the backend
+├── frontend/         # React 19 + Tailwind v4 UI served via nginx
 ├── docker-compose.yaml
 └── README.md         # you are here
 ```
 
-The **backend** is done and dockerized. The **frontend** is the next deliverable
-— it will be a React app, also dockerized, and we will add it as a second
-service to `docker-compose.yaml` so that `docker compose up` brings up the
-whole stack at once. Until then, only the backend service is wired up.
+Both services are dockerized. `docker compose up --build` brings up the full
+stack — backend on port **8000**, frontend on port **5173**.
 
 If you want the deeper write-up of model limitations, operational risks and
 the privacy / GDPR analysis, that lives in
@@ -60,17 +58,39 @@ From the repository root:
 docker compose up --build
 ```
 
-That command builds the `isa-movielens-backend` image from `backend/Dockerfile`
-and starts the container as `isa-recsys`, listening on
-<http://localhost:8000>. Once the frontend package lands, the same command
-will additionally build and start the React container (planned port:
-`5173`).
+That command builds both images and starts two containers:
+
+| Container | Image | Port |
+|---|---|---|
+| `isa-recsys` | `isa-movielens-backend` | <http://localhost:8000> |
+| `isa-frontend` | `isa-movielens-frontend` | <http://localhost:5173> |
+
+Open <http://localhost:5173> in a browser to use the UI. The frontend nginx
+container proxies `/recommendations`, `/reference-data` and `/health` to the
+backend, so no CORS configuration is needed in production.
 
 To stop everything:
 
 ```bash
 docker compose down
 ```
+
+### Frontend dev server (without Docker)
+
+If you want hot-reload during frontend development, run the backend via Docker
+and the frontend via Vite directly:
+
+```bash
+# terminal 1 — backend only
+docker compose up backend
+
+# terminal 2 — frontend dev server (proxies API calls to localhost:8000)
+cd frontend
+npm install
+npm run dev        # http://localhost:5173
+```
+
+---
 
 If you would rather not use compose (for example to override env vars
 ad-hoc), the equivalent direct commands are:

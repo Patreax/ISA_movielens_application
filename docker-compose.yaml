@@ -11,12 +11,20 @@ services:
     container_name: isa-recsys
     ports:
       - "8000:8000"
-    # Override the routing threshold or CORS by uncommenting:
-    # environment:
-    #   RECSYS_API_RATING_THRESHOLD: "10"
-    #   RECSYS_API_CORS_ORIGINS: "http://localhost:5173"
+    environment:
+      RECSYS_API_CORS_ORIGINS: "http://localhost:5173"
     # Override baked-in assets at runtime by mounting volumes:
     # volumes:
     #   - ./backend/models:/app/models:ro
     #   - ./backend/data/ml-1m:/app/data/ml-1m:ro
+    restart: "no"
+
+  frontend:
+    build: ./frontend
+    image: isa-movielens-frontend
+    container_name: isa-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
     restart: "no"

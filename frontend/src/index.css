@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #000;
+  color: #e2e2e2;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+.glass-card {
+  background: rgba(20, 20, 20, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Cinema-style form inputs */
+.cinema-input {
+  width: 100%;
+  background: #141414;
+  color: #fff;
+  padding: 12px 0;
+  border: none;
+  border-bottom: 2px solid #3f3f46;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.cinema-input:focus {
+  border-bottom-color: #e50914;
+}
+
+.cinema-input::placeholder {
+  color: #52525b;
+}
+
+.cinema-select {
+  width: 100%;
+  background: #141414;
+  color: #fff;
+  padding: 12px 0;
+  border: none;
+  border-bottom: 2px solid #3f3f46;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  cursor: pointer;
+  appearance: none;
+  transition: border-color 0.2s;
+}
+
+.cinema-select:focus {
+  border-bottom-color: #e50914;
+}
+
+/* Range slider thumb */
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #e50914;
+  cursor: pointer;
+}
+
+input[type='range']::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #e50914;
+  cursor: pointer;
+  border: none;
+}
+
+/* Spin animation for loading */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Toast slide-in from right */
+@keyframes toast-in {
+  from {
+    transform: translateX(calc(100% + 1rem));
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast-enter {
+  animation: toast-in 0.25s ease-out forwards;
+}

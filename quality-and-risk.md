@@ -4,7 +4,7 @@ This document covers the assignment's section **3.1.C**. The first half
 evaluates the deployed model and service quality. The second half evaluates
 the deployment from a privacy-assurance and data-protection perspective,
 The closing section proposes how the solution could be
-improved — first and foremost an explicit feedback ingestion path.
+improved - first and foremost an explicit feedback ingestion path.
 
 ---
 
@@ -19,7 +19,7 @@ occupation (a fixed 21-class taxonomy from 2000). Two unrelated users with
 the same `(age_code, gender, occupation_code)` tuple receive identical
 first recommendations until they differ on `preferred_genres`. For users
 in under-represented demographic combinations the matched cluster's
-average ratings have high variance — the score numbers stay valid (they
+average ratings have high variance - the score numbers stay valid (they
 are real within-cluster averages) but the *ranking* may not generalise to
 that specific user.
 
@@ -45,7 +45,7 @@ supported.
 
 ### 1.4 No personalisation feedback loop
 
-The service is stateless. It does not learn from request traffic — every
+The service is stateless. It does not learn from request traffic - every
 user gets the same scoring as long as the `.pkl` files are unchanged. Bad
 recommendations cannot be corrected without retraining upstream and
 re-baking the image. This is also the single biggest qualitative
@@ -61,7 +61,7 @@ improvement opportunity (see §4).
 | Asset files (`.pkl` / `.dat`) missing or corrupt at boot | low | service exits at startup with a `RuntimeError` | The Dockerfile bakes the assets into the image, so `docker run` is reproducible. The startup self-test (warm + cold inference) is the canary. |
 | `surprise.SVD.predict` is O(M) per request × M ≈ 3 883 candidates | low at the demo's RPS, untested at higher load | per-request latency increases under sustained load | Latency budget verified offline (~0.6 s p95 on the demo machine). For higher RPS the obvious next step is precomputing the per-user top-K. |
 | `pickle.load` of `.pkl` artefacts at startup | low (operator-controlled assets) | code execution if a hostile artefact is mounted | Operators are expected to bake or mount only trusted artefacts produced by the source recsys repo. Documented; not enforced cryptographically (see §4 for a signing follow-up). |
-| Plain HTTP on the bound port | low at demo time | request bodies and responses are observable on the wire | The container speaks plain HTTP only — for a school demo we deliberately do not enable HTTPS. A real deployment must front the container with a TLS-terminating reverse proxy. |
+| Plain HTTP on the bound port | low at demo time | request bodies and responses are observable on the wire | The container speaks plain HTTP only - for a school demo we deliberately do not enable HTTPS. A real deployment must front the container with a TLS-terminating reverse proxy. |
 
 ---
 
@@ -82,9 +82,9 @@ underlying participants.
 | Asset | Where it lives | What it contains | Personal-data character |
 |---|---|---|---|
 | `movies.dat` | baked into the image | movie ID, title, genres | not personal |
-| `users.dat` | baked into the image | `user_id`, `gender`, `age_code`, `occupation_code`, `zip_code` | **pseudonymized** quasi-identifiers (the classic Sweeney triple `(gender, ZIP, DOB)` is *partially* present — DOB is replaced by a 7-bucket `age_code`, `zip_code` is 5-digit US) |
+| `users.dat` | baked into the image | `user_id`, `gender`, `age_code`, `occupation_code`, `zip_code` | **pseudonymized** quasi-identifiers (the classic Sweeney triple `(gender, ZIP, DOB)` is *partially* present - DOB is replaced by a 7-bucket `age_code`, `zip_code` is 5-digit US) |
 | `ratings.dat` | baked into the image | `(user_id, item_id, rating, timestamp)` rows | pseudonymized behavioural data |
-| `cold_start_model['user_features']` (inside `cold_start_model.pkl`) | baked into the image | per-user row indexed by `user_id` with cluster id and engineered features | pseudonymized — *every* MovieLens user's cluster membership is a model parameter |
+| `cold_start_model['user_features']` (inside `cold_start_model.pkl`) | baked into the image | per-user row indexed by `user_id` with cluster id and engineered features | pseudonymized - *every* MovieLens user's cluster membership is a model parameter |
 
 The HTTP surface itself is conservative:
 
@@ -114,8 +114,8 @@ implicitly memorise.
 This service is a **centralized inference service** running a model that
 was itself **centrally trained**. The full training set (MovieLens-1M)
 was processed in one place; the trained artefacts are then shipped as a
-single image. The lecture's central-learning caveat —
-*"operators have access to sensitive training data"* — applies in
+single image. The lecture's central-learning caveat -
+*"operators have access to sensitive training data"* - applies in
 principle, but the training data is a publicly redistributable benchmark,
 so the residual privacy cost is bounded by the dataset's own licence
 rather than by our deployment choices. Distributed alternatives
@@ -129,9 +129,9 @@ maps each one to this concrete deployment.
 
 | Attack family | Applicability here | Residual risk |
 |---|---|---|
-| **Membership Inference** ("was user X in the training set?") | Directly applicable — `POST /recommendations` returns **HTTP 404** for an unknown integer ID and **HTTP 200** for a known one. This is a perfect oracle: any positive integer in `[1, 6040]` reveals MovieLens-1M membership. | High in principle, low in practice — the MovieLens-1M user set is public anyway. The same code shipped against a private user table would leak who is in the table; see §4.2 for the fix. |
-| **Model Inversion** (reconstruct training inputs from model outputs) | Partially applicable — SVD predictions are known to leak per-user rating patterns under repeated querying. The cold path returns within-cluster averages, which leak the cluster's collective taste (a property of ~700 people, not one). | Low — there is no rate limiting, but the underlying ratings are public. A non-public deployment would need rate limiting or differential-privacy noise on `score`. |
-| **Property Inference** (uncover sensitive properties of the training set) | Applicable by design — the cold-start `explanation` field literally states `"...similar to cluster N"`, which is a property-inference output we hand the client deliberately. | Acceptable — it is the product. A privacy-strict deployment would coarsen the explanation. |
+| **Membership Inference** ("was user X in the training set?") | Directly applicable - `POST /recommendations` returns **HTTP 404** for an unknown integer ID and **HTTP 200** for a known one. This is a perfect oracle: any positive integer in `[1, 6040]` reveals MovieLens-1M membership. | High in principle, low in practice - the MovieLens-1M user set is public anyway. The same code shipped against a private user table would leak who is in the table; see §4.2 for the fix. |
+| **Model Inversion** (reconstruct training inputs from model outputs) | Partially applicable - SVD predictions are known to leak per-user rating patterns under repeated querying. The cold path returns within-cluster averages, which leak the cluster's collective taste (a property of ~700 people, not one). | Low - there is no rate limiting, but the underlying ratings are public. A non-public deployment would need rate limiting or differential-privacy noise on `score`. |
+| **Property Inference** (uncover sensitive properties of the training set) | Applicable by design - the cold-start `explanation` field literally states `"...similar to cluster N"`, which is a property-inference output we hand the client deliberately. | Acceptable - it is the product. A privacy-strict deployment would coarsen the explanation. |
 | **Parameter / Hyperparameter Inference** (steal model weights) | The full SVD weights and KMeans cluster centroids ship inside the Docker image. Anyone who can pull the image can read the parameters straight off disk. | Acceptable for the demo; the artefacts are derivative of a public dataset. For a private model the standard mitigation is to mount the artefacts at runtime instead of baking them in (already supported). |
 
 ### 3.5 Regulatory / GDPR lens
@@ -141,22 +141,22 @@ new personal data, the four GDPR-style concerns from the lecture still
 map:
 
 - **Data collection & usage**: nothing is collected beyond what the
-  caller voluntarily supplies, and nothing is persisted — the cleanest
+  caller voluntarily supplies, and nothing is persisted - the cleanest
   posture under data-minimisation (GDPR Art. 5(1)(c)).
 - **Consent**: not applicable to the demo. A production deployment that
   adds the feedback endpoint proposed in §4.1 *will* trigger a consent
   obligation; that is built into the proposal.
 
-### 3.6 PETs evaluation — what fits this service, what does not
+### 3.6 PETs evaluation - what fits this service, what does not
 
 | PET | Verdict for this service |
 |---|---|
 | **Data masking / generalization** | Already in the dataset upstream (`age_code` is a 7-bucket generalization of DOB; `occupation` is a 21-class generalization). Adequate. |
-| **Pseudonymization** | In place — MovieLens user IDs are pseudonyms; UUIDs supplied by cold-start callers are pseudonymous by construction. |
-| **Differential Privacy** | Not added now. Recommended for a follow-up — applicable both to retraining (DP-SGD on SVD, DP noise on KMeans) and to the cold-start `score` (Laplace noise) to defend against repeated-query attacks. See §4.3. |
-| **Homomorphic Encryption** | Not pursued — the use case is single-tenant inference on a public dataset, not multi-party computation on private inputs, and the 100×–10 000× compute overhead would kill the latency budget. |
-| **Federated Learning / Split Learning** | Conceptually a fit — every user holds their ratings on-device and only model updates leave the device. Long-term redesign; see §4.3. |
-| **Trusted / Secure Execution Environments** | Not pursued — the threat model does not include an untrusted host operator. |
+| **Pseudonymization** | In place - MovieLens user IDs are pseudonyms; UUIDs supplied by cold-start callers are pseudonymous by construction. |
+| **Differential Privacy** | Not added now. Recommended for a follow-up - applicable both to retraining (DP-SGD on SVD, DP noise on KMeans) and to the cold-start `score` (Laplace noise) to defend against repeated-query attacks. See §4.3. |
+| **Homomorphic Encryption** | Not pursued - the use case is single-tenant inference on a public dataset, not multi-party computation on private inputs, and the 100×–10 000× compute overhead would kill the latency budget. |
+| **Federated Learning / Split Learning** | Conceptually a fit - every user holds their ratings on-device and only model updates leave the device. Long-term redesign; see §4.3. |
+| **Trusted / Secure Execution Environments** | Not pursued - the threat model does not include an untrusted host operator. |
 
 ---
 
@@ -183,7 +183,7 @@ How it would work:
 1. The endpoint appends the `(pseudo_user_id, movie_id, rating, timestamp)`
    tuple to a write-ahead log (a SQLite file would be enough; a real
    deployment could use Postgres).
-2. A nightly batch job (Cron / GitHub Actions / Airflow — out of scope
+2. A nightly batch job (Cron / GitHub Actions / Airflow - out of scope
    for the service itself) reads the log, merges new ratings into the
    training data, retrains the SVD and the cold-start KMeans, and
    publishes new `.pkl` artefacts.
@@ -212,7 +212,7 @@ repeat users.
 ### 4.2 Close the membership-inference oracle
 
 `POST /recommendations` returns HTTP 404 for an unknown integer user ID
-and HTTP 200 for a known one — a perfect membership oracle. Harmless on
+and HTTP 200 for a known one - a perfect membership oracle. Harmless on
 the public MovieLens demo, but the same code shipped against a private
 user table would leak who is in the table.
 
@@ -236,10 +236,10 @@ into the image.
 
 The two things that matter most going forward:
 
-1. **Feedback endpoint (section 4.1)** — the only change that meaningfully
+1. **Feedback endpoint (section 4.1)** - the only change that meaningfully
    improves recommendation quality, and the one that forces consent,
    pseudonymization, and differential privacy to be designed in from day
    one rather than bolted on later.
-2. **Closing the 200/404 oracle (section 4.2)** — a small code change that
+2. **Closing the 200/404 oracle (section 4.2)** - a small code change that
    removes the membership-inference leak before the service is ever
    pointed at non-public data.
